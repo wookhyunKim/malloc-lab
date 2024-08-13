@@ -112,17 +112,6 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-    // // 적당한 맞춤 fit을 찾지 못했을 때, extend_heap 함수를 호출한다. 
-    // int newsize = ALIGN(size + SIZE_T_SIZE);
-    // void *p = mem_sbrk(newsize);
-    // if (p == (void *)-1)
-	// return NULL;
-    // else {
-    //     *(size_t *)p = size;
-    //     return (void *)((char *)p + SIZE_T_SIZE);
-    // }
-
-
     size_t asize; // malloc을 할 때 header , footer도 각각 4바이트 씩도 추가해주어야 하기 때문에 asize라는 변수를 설정
     size_t extendsize; 
     char *bp;
@@ -181,38 +170,38 @@ void *mm_realloc(void *ptr, size_t size)
     size_t copySize;
     
 
-    // if(!GET_ALLOC(NEXT_BLKP(HDRP(ptr)))){
+    if(!GET_ALLOC(NEXT_BLKP(HDRP(ptr)))){
 
-    //     /*
-    //     case 1. 뒤에꺼랑 합쳤는데 input size보다 클 때
+        /*
+        case 1. 뒤에꺼랑 합쳤는데 input size보다 클 때
         
-    //     case 2. 끝일떄 sbrk 힙 늘려
-    //     */
-    //     newptr = coalesce(ptr);
-    //     if (GET_SIZE(HDRP(newptr))>=size){
-    //         return newptr;
-    //     }
+        case 2. 끝일떄 sbrk 힙 늘려
+        */
+        newptr = coalesce(ptr);
+        if (GET_SIZE(HDRP(newptr))>=size){
+            return newptr;
+        }
         
 
-    // }else if(GET_SIZE(NEXT_BLKP(ptr)==0)){
-    //     mem_sbrk(CHUNKSIZE);
-    //     newptr = mm_malloc(size);
-    //     if (newptr == NULL)
-    //         return NULL;
+    }else if(GET_SIZE(NEXT_BLKP(ptr)==0)){
+        mem_sbrk(CHUNKSIZE);
+        newptr = mm_malloc(size);
+        if (newptr == NULL)
+            return NULL;
 
-    //     // 기존 블록 크기 가져오기
-    //     copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
-    //     if (size < copySize)
-    //         copySize = size;
+        // 기존 블록 크기 가져오기
+        copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
+        if (size < copySize)
+            copySize = size;
         
-    //     // 새로운 위치로 데이터 복사
-    //     memcpy(newptr, oldptr, copySize);
+        // 새로운 위치로 데이터 복사
+        memcpy(newptr, oldptr, copySize);
 
-    //     // 이전 블록 해제
-    //     mm_free(oldptr);
-    //     return newptr;
-    // }
-    // else{
+        // 이전 블록 해제
+        mm_free(oldptr);
+        return newptr;
+    }
+    else{
     newptr = mm_malloc(size);
     if (newptr == NULL)
         return NULL;
@@ -228,8 +217,42 @@ void *mm_realloc(void *ptr, size_t size)
     // 이전 블록 해제
     mm_free(oldptr);
     return newptr;
-    // }
+    }
 }
+
+// /*
+//    기존에 malloc으로 동적 할당된 메모리 크기를 변경시켜주는 함수
+//    현재 메모리에 bp가 가르키는 사이즈를 할당한 만큼 충분하지 않다면 메모리의 다른 공간의 기존 크기의 공간 할당 + 기존에 있던 데이터를 복사한 후 추가로 메모리 할당
+// */
+// void *mm_realloc(void *bp, size_t size) {
+//     size_t old_size = GET_SIZE(HDRP(bp));
+//     size_t new_size = size + (2 * WSIZE);   // 2*WISE는 헤더와 풋터
+
+//     // new_size가 old_size보다 작거나 같으면 기존 bp 그대로 사용
+//     if (new_size <= old_size) {
+//         return bp;
+//     }
+//     // new_size가 old_size보다 크면 사이즈 변경
+//     else {
+//         size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
+//         size_t current_size = old_size + GET_SIZE(HDRP(NEXT_BLKP(bp)));
+
+//         // next block이 가용상태이고 old, next block의 사이즈 합이 new_size보다 크면 그냥 그거 바로 합쳐서 쓰기
+//         if (!next_alloc && current_size >= new_size) {
+//             PUT(HDRP(bp), PACK(current_size, 1));
+//             PUT(FTRP(bp), PACK(current_size, 1));
+//             return bp;
+//         }
+//         // 아니면 새로 block 만들어서 거기로 옮기기
+//         else {
+//             void *new_bp = mm_malloc(new_size);
+//             place(new_bp, new_size);
+//             memcpy(new_bp, bp, new_size);  // 메모리의 특정한 부분으로부터 얼마까지의 부분을 다른 메모리 영역으로 복사해주는 함수(old_bp로부터 new_size만큼의 문자를 new_bp로 복사해라!)
+//             mm_free(bp);
+//             return new_bp;
+//         }
+//     }
+// }
 
 
 
@@ -317,9 +340,6 @@ static void *coalesce(void *bp){
 
 static void place(void *bp,size_t asize){
     // 적당한 가용공간을 찾아서 그 자리를 malloc으로 채우는 것
-    // 아래의 함수에서 bp를 받아 
-    // PUT(HDRP(bp),PACK(asize,1))
-    // PUT(FTRP(bp),PACK(asize,1))
     size_t csize = GET_SIZE(HDRP(bp));
     // csize : free 크기 
     // asize : malloc 크기
