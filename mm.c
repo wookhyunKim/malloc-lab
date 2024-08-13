@@ -26,6 +26,8 @@ static void place(void *,size_t );
 static void * find_fit(size_t);
 
 static char *heap_listp = NULL;  // 힙의 시작 포인터
+static char *last_bp;
+static void *next_fit(size_t );
 //  ====================================================================전방선언  
 
 /*********************************************************
@@ -100,7 +102,7 @@ int mm_init(void)
    if (extend_heap(CHUNKSIZE/WSIZE) == NULL){
     return -1;
    }
-   
+   last_bp = (char *)heap_listp;
     return 0;
 }
 
@@ -140,8 +142,9 @@ void *mm_malloc(size_t size)
     }
 
 
-    if ((bp = find_fit(asize)) != NULL){
+    if ((bp = next_fit(asize)) != NULL){
         place(bp,asize);
+        last_bp = bp;
         return bp;
     }
 
@@ -150,6 +153,7 @@ void *mm_malloc(size_t size)
         return NULL;
     }
     place(bp,asize);
+    last_bp = bp;
     return bp;
 
 
@@ -284,6 +288,7 @@ static void *coalesce(void *bp){
 
     if (prev_alloc && next_alloc) {     
         // CASE 1 : prev 와 next 가 할당되어있을 때       
+        last_bp = bp;
         return bp;
     } else if (prev_alloc && !next_alloc) {
         // CASE 2 : prev 만  할당되어있을 때    
@@ -304,6 +309,7 @@ static void *coalesce(void *bp){
         bp = PREV_BLKP(bp);
     }
 
+    last_bp = bp;
     return bp;
 }
 
@@ -329,8 +335,6 @@ static void place(void *bp,size_t asize){
         PUT(HDRP(bp), PACK(csize, 1));   // 블록 전체를 할당으로 표시
         PUT(FTRP(bp), PACK(csize, 1));
     }
-
-
 }
 
 
@@ -346,5 +350,29 @@ static void * find_fit(size_t asize){
         }
         bp = NEXT_BLKP(bp);
     }
+    return NULL;
+}
+
+
+
+static void *next_fit(size_t adjusted_size) {
+    char *bp = last_bp;
+
+    for (bp = NEXT_BLKP(bp); GET_SIZE(HDRP(bp)) != 0; bp = NEXT_BLKP(bp)) {
+        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= adjusted_size) {
+            last_bp = bp;
+            return bp;
+        }
+    }
+
+    bp = heap_listp;
+    while (bp < last_bp) {
+        bp = NEXT_BLKP(bp);
+        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= adjusted_size) {
+            last_bp = bp;
+            return bp;
+        }
+    }
+
     return NULL;
 }
