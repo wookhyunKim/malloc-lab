@@ -1,6 +1,9 @@
 # Target
 mdriver
 
+# json
+*.json
+
 # Prerequisites
 *.d
 
