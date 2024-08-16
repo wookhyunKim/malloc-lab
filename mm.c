@@ -170,38 +170,38 @@ void *mm_realloc(void *ptr, size_t size)
     size_t copySize;
     
 
-    if(!GET_ALLOC(NEXT_BLKP(HDRP(ptr)))){
+    // if(!GET_ALLOC(NEXT_BLKP(HDRP(ptr)))){
 
-        /*
-        case 1. 뒤에꺼랑 합쳤는데 input size보다 클 때
+    //     /*
+    //     case 1. 뒤에꺼랑 합쳤는데 input size보다 클 때
         
-        case 2. 끝일떄 sbrk 힙 늘려
-        */
-        newptr = coalesce(ptr);
-        if (GET_SIZE(HDRP(newptr))>=size){
-            return newptr;
-        }
+    //     case 2. 끝일떄 sbrk 힙 늘려
+    //     */
+    //     newptr = coalesce(ptr);
+    //     if (GET_SIZE(HDRP(newptr))>=size){
+    //         return newptr;
+    //     }
         
 
-    }else if(GET_SIZE(NEXT_BLKP(ptr)==0)){
-        mem_sbrk(CHUNKSIZE);
-        newptr = mm_malloc(size);
-        if (newptr == NULL)
-            return NULL;
+    // }else if(GET_SIZE(NEXT_BLKP(ptr)==0)){
+    //     mem_sbrk(CHUNKSIZE);
+    //     newptr = mm_malloc(size);
+    //     if (newptr == NULL)
+    //         return NULL;
 
-        // 기존 블록 크기 가져오기
-        copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
-        if (size < copySize)
-            copySize = size;
+    //     // 기존 블록 크기 가져오기
+    //     copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
+    //     if (size < copySize)
+    //         copySize = size;
         
-        // 새로운 위치로 데이터 복사
-        memcpy(newptr, oldptr, copySize);
+    //     // 새로운 위치로 데이터 복사
+    //     memcpy(newptr, oldptr, copySize);
 
-        // 이전 블록 해제
-        mm_free(oldptr);
-        return newptr;
-    }
-    else{
+    //     // 이전 블록 해제
+    //     mm_free(oldptr);
+    //     return newptr;
+    // }
+    // else{
     newptr = mm_malloc(size);
     if (newptr == NULL)
         return NULL;
@@ -217,7 +217,9 @@ void *mm_realloc(void *ptr, size_t size)
     // 이전 블록 해제
     mm_free(oldptr);
     return newptr;
-    }
+    // }
+
+    
 }
 
 // /*
@@ -375,11 +377,11 @@ static void * find_fit(size_t asize){
 
 
 
-static void *next_fit(size_t adjusted_size) {
+static void *next_fit(size_t size) {
     char *bp = last_bp;
 
     for (bp = NEXT_BLKP(bp); GET_SIZE(HDRP(bp)) != 0; bp = NEXT_BLKP(bp)) {
-        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= adjusted_size) {
+        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= size) {
             last_bp = bp;
             return bp;
         }
@@ -388,7 +390,7 @@ static void *next_fit(size_t adjusted_size) {
     bp = heap_listp;
     while (bp < last_bp) {
         bp = NEXT_BLKP(bp);
-        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= adjusted_size) {
+        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= size) {
             last_bp = bp;
             return bp;
         }
